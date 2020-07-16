@@ -19,12 +19,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // This delegate does not imply the connecting scene or session are new (see `application:configurationForConnectingSceneSession` instead).
 
         // Create the SwiftUI view that provides the window contents.
-        let contentView = ContentView()
+        let view = MainView()
 
         // Use a UIHostingController as window root view controller.
         if let windowScene = scene as? UIWindowScene {
             let window = UIWindow(windowScene: windowScene)
-            window.rootViewController = UIHostingController(rootView: contentView)
+            window.rootViewController = UIHostingController(rootView: view.environmentObject(CoordinatorState(message: "Hello")))
             self.window = window
             window.makeKeyAndVisible()
         }
@@ -57,7 +57,55 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // Use this method to save data, release shared resources, and store enough scene-specific state information
         // to restore the scene back to its current state.
     }
+    
+    func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
+        guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+              let urlToOpen = userActivity.webpageURL else {
+            return
+        }
 
+        handleURL(scene, urlToOpen)
+    }
+    
+    func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        let urlToOpen = URLContexts.first?.url ?? URL(fileURLWithPath: "deeplink://")
+        
+        self.handleURL(scene, urlToOpen)
+    }
+    
+    func handleURL(_ scene: UIScene, _ url: URL) {
+        let urlComponents = NSURLComponents.init(url: url, resolvingAgainstBaseURL: false)
+        
+        var message = ""
+        
+        if  urlComponents != nil {
+            if let urlQueryParameters = urlComponents?.queryItems {
+                if(url.scheme == "deeplink") {
+                    for parameter in urlQueryParameters {
+                        switch parameter.name {
+                        case "message":
+                            message = parameter.value!
+                        default:
+                            message = "No match"
+                            
+                            print("No match")
+                        }
+                    }
+                }
+            }
+        }
+        
+        let view = MainView()
+        
+        // Use a UIHostingController as window root view controller.
+        if let windowScene = scene as? UIWindowScene {
+            let window = UIWindow(windowScene: windowScene)
+            window.rootViewController = UIHostingController(rootView: view.environmentObject(CoordinatorState(message: message)))
+            self.window = window
+            window.makeKeyAndVisible()
+        }
+        
+    }
 
 }
 
